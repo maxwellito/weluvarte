@@ -133,8 +133,12 @@
 
     v = videoInfo.videoJsonPlayer;
     output += '<h3>' + v.VTI + ' [' + v.VTX + ']</h3>';
-    output += !!v.infoProg ? '<p>' + v.infoProg + '</p>' : '';
-    output += '<p><b>' + v.VSU + '</b></br>' + v.VDE + '</p>';
+
+    output += '<p>';
+    output += !!v.infoProg ? '<b>' + v.infoProg + '</b><br>' : '';
+    output += !!v.VSU      ? '<b>' + v.VSU      + '</b><br>' : '';
+    output += !!v.VDE      ?         v.VDE                   : '';
+    output += '</p>';
 
     for(i in v.VSR) {
       vsr = v.VSR[i];
@@ -151,7 +155,7 @@
     for (i in versions) {
       output += '<p><b>' + i + '</b>: '+ versions[i].join(' ') +'</p>';
     }
-    return output;
+    return '<div class="'+ DOM_CLASS + '_video">' + output + '</div>';
   }
 
   // Let's start the magic
