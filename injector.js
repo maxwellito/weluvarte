@@ -7,10 +7,11 @@
  */
 
 (function () {
-  var HTML_INTRO = '<h1>WE LUV\' ARTE</h1><p>Here the list of video(s) we could retrieve from the current page, with the different versions and qualities. <i>To download them, make a right click on a tag with the quality you want, then "Save the link as"</i></p>',
+  var HTML_INTRO = '<h1>WE LUV\' ARTE</h1><p>Here the list of video(s) we could retrieve from the current page, with the different versions and qualities. <i>To download them on bad browsers (:Internet Explorer and Safari), make a right click on a tag with the quality you want, then "Save the link as"</i></p>',
       HTML_WARN  = '<h2>That\'s awkward, but we cannot retrieve a video. Be sure you are on a valid page (: arte.tv). Otherwise go on <a href="http://maxwellito.github.io/weluvarte">http://maxwellito.github.io/weluvarte</a> for more information. Sorry.',
+      HTML_CLOSE = '<div onclick="this.parentNode.remove();" style="position:absolute; top:5px; right:5px;cursor: pointer;font-size: 3em;line-height: 0.5em;">&#215;</div>',
       DOM_CLASS  = 'wla',
-      STYLE_TAG  = '<style>.' + DOM_CLASS + ' {position: absolute; top: 0; left: 0; padding: 2%; width: 100%; z-index: 99999; background: white;box-sizing: border-box;border-bottom: 5px solid #fd4600;} .' + DOM_CLASS + ' p a{font-weight: bold; color: white; padding:3px; border-radius: 3px; background: #333;} .' + DOM_CLASS + '_video {border-top: 3px solid black;}</style>';
+      STYLE_TAG  = '<style>.' + DOM_CLASS + ' {position: absolute; top: 0; left: 0; padding: 2%; width: 100%; z-index: 99999; background: white;box-sizing: border-box;border-bottom: 15px solid #fd4600;} .' + DOM_CLASS + ' p a{font-weight: bold; color: white; padding:3px; border-radius: 3px; background: #333;} .' + DOM_CLASS + '_video {border-top: 3px solid black;}</style>';
 
   /**
    * 
@@ -103,6 +104,7 @@
     // Insert intro
     output.unshift((output.length === 0) ? HTML_WARN : HTML_INTRO);
     output.push(STYLE_TAG);
+    output.push(HTML_CLOSE);
     
     // Create and set the DOM
     finalDom = document.createElement('div');
