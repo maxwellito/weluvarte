@@ -26,6 +26,16 @@
         margin-left: -240px;
         text-align: center;
       }
+      .code {
+        display: block;
+        padding: 6px;
+        font-family: monospace;
+        font-size: 16px;
+        text-align: left;
+        word-break: break-all;
+        border-radius: 4px;
+        background-color: #dddddd;
+      }
       .button {
         padding: 6px;
         border-radius: 4px;
@@ -39,7 +49,10 @@
         font-style: italic;
       }
       .not-visible {
-        display: none;
+        display: inline-block;
+        width: 0px;
+        height: 0px;
+        overflow: hidden;
       }
 
       @media only screen and (max-width:480px) {
@@ -55,10 +68,30 @@
 
   <body>
     <div class="panel">
-      <p>Drag this <a class="button" href="javascript:(a%20=%20(b%20=%20document).createElement('script')).src%20=%20'http://maxwellito.github.io/weluvarte/injector.js',%20b.body.appendChild(a);void(0);" title="We Luv Arte!"><span class="not-visible">We Luv Arte! download </span>button</a> onto your bookmarks bar</p>
+
+      <div id="mobile">
+        <p>Add a bookmark pointing to this url</p>
+        <p class="code">javascript:(a%20=%20(b%20=%20document).createElement('script')).src%20=%20'http://maxwellito.github.io/weluvarte/injector.js',%20b.body.appendChild(a);void(0);</p>
+      </div>
+      <div id="desktop">
+        <p>Drag this <a class="button" onclick="alert('I didn\'t say to click on it. I asked to drag it. Try again.'); return false;" href="javascript:(a%20=%20(b%20=%20document).createElement('script')).src%20=%20'http://maxwellito.github.io/weluvarte/injector.js',%20b.body.appendChild(a);void(0);" title="We Luv Arte!"><span class="not-visible">We Luv Arte! download </span>button</a> onto your bookmarks bar</p>
+      </div>
+
       <p class="credits">- then -</p>
-      <p>Click "We Luv Arte! download button" while watching a video on <a class="link" href="http://arte.tv">arte.tv</a> to download it</p>
-      <p class="credits">These videos are the property of Arte, and the usage you do of this plugin is your entire responsability. That's right I decline all responsabilities about it. By <a class="link" href="http://twitter.com/mxwllt">@mxwllt</a>.</p>  
+      <p>Click on your new bookmark you just created while watching a video on <a class="link" href="http://arte.tv">arte.tv</a> to download it</p>
+      <p class="credits">These videos are the property of Arte, and the usage you do of this plugin is your entire responsability. That's right I decline all responsabilities about it. By <a class="link" href="http://twitter.com/mxwllt">@mxwllt</a>.</p>
     </div>
+
+    <script>
+      // Remove the useless instructions
+      var mobileDom = document.getElementById('mobile');
+      var desktopDom = document.getElementById('desktop');
+      if (/(Android|iPhone|iPad|iPod|BlackBerry|Windows\ Phone|Mobile)/i.test(navigator.userAgent)) {
+        desktopDom.remove();
+      }
+      else {
+        mobileDom.remove();
+      }
+    </script>
   </body>
 </html>
