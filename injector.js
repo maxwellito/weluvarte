@@ -6,12 +6,13 @@
  * 
  */
 
-(function () {
+(function (window) {
   var HTML_INTRO = '<h1>WE LUV\' ARTE</h1><p>Here the list of video(s) we could retrieve from the current page, with the different versions and qualities. <i>To download them on bad browsers (:Internet Explorer and Safari), make a right click on a tag with the quality you want, then "Save the link as"</i></p>',
       HTML_WARN  = '<h2>That\'s awkward, but we cannot retrieve a video. Be sure you are on a valid page (: arte.tv). Otherwise go on <a href="http://maxwellito.github.io/weluvarte">http://maxwellito.github.io/weluvarte</a> for more information. Sorry.',
       HTML_CLOSE = '<div onclick="this.parentNode.remove();" style="position:absolute; top:5px; right:5px;cursor: pointer;font-size: 3em;line-height: 0.5em;">&#215;</div>',
       DOM_CLASS  = 'wla',
-      STYLE_TAG  = '<style>.' + DOM_CLASS + ' {position: absolute; top: 0; left: 0; padding: 2%; width: 100%; z-index: 99999; background: white;box-sizing: border-box;border-bottom: 15px solid #fd4600;} .' + DOM_CLASS + ' p a{font-weight: bold; color: white; padding:3px; border-radius: 3px; background: #333;} .' + DOM_CLASS + '_video {border-top: 3px solid black;}</style>';
+      STYLE_TAG  = '<style>.' + DOM_CLASS + ' {position: absolute; top: 0; left: 0; padding: 2%; width: 100%; z-index: 99999; background: white;box-sizing: border-box;border-bottom: 15px solid #fd4600;} .' + DOM_CLASS + ' .dl_btn{font-weight: bold; color: white; padding:3px; border-radius: 3px; background: #333;} .' + DOM_CLASS + ' .cc_btn{display: none; margin-right: 20px;} .' + DOM_CLASS + '_video {border-top: 3px solid black;}</style>',
+      CC_SCRIPT  = 'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js';
 
   /**
    * 
@@ -90,6 +91,7 @@
   function parseVideosInfo(videosInfo) {
     var i,
       finalDom,
+      ccScriptDom,
       videoHtml,
       output = [];
 
@@ -105,6 +107,11 @@
     output.unshift((output.length === 0) ? HTML_WARN : HTML_INTRO);
     output.push(STYLE_TAG);
     output.push(HTML_CLOSE);
+
+    // Inject the Chromecast script
+    ccScriptDom = document.createElement('script');
+    ccScriptDom.src = CC_SCRIPT;
+    document.body.appendChild(ccScriptDom);
     
     // Create and set the DOM
     finalDom = document.createElement('div');
@@ -151,7 +158,8 @@
       if (!versions[vsr.versionLibelle]) {
         versions[vsr.versionLibelle] = [];
       }
-      versions[vsr.versionLibelle].push('<a href="'+vsr.url+'" download>'+vsr.quality+'</a>');
+      versions[vsr.versionLibelle].push('<a class="dl_btn" href="'+vsr.url+'" download>'+vsr.quality+'</a>');
+      versions[vsr.versionLibelle].push('<img class="cc_btn" onclick="chromecaster(\''+vsr.url+'\')" src="//localhost/chromecast.svg" /> ');
     }
 
     for (i in versions) {
@@ -160,10 +168,108 @@
     return '<div class="'+ DOM_CLASS + '_video">' + output + '</div>';
   }
 
+  /**
+   * Init the Chromecast to check if the API is available
+   * and get the necessary IDs
+   * 
+   */
+  var initChromecast = function () {
+    // Init the Cast API
+    var initializeCastApi = function () {
+      console.info('Initialize Chromecast API');
+      var sessionRequest = new chrome.cast.SessionRequest(chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID);
+      var apiConfig = new chrome.cast.ApiConfig(sessionRequest, sessionListener, receiverListener);
+      chrome.cast.initialize(apiConfig, onInitSuccess, onError);
+    };
+
+    // Listener setup for when the chromecast is available
+    // >> useless in our case
+    window['__onGCastApiAvailable'] = function (loaded, errorInfo) {
+      if (loaded) {
+        initializeCastApi();
+      } else {
+        console.log(errorInfo);
+      }
+    };
+
+    // Check if the Chromecast is initialised
+    if (!chrome.cast || !chrome.cast.isAvailable) {
+      setTimeout(initializeCastApi, 1000);
+    }
+
+    var receiverListener = function (e) {
+      if ( e === chrome.cast.ReceiverAvailability.AVAILABLE) {
+        // Perfect time to show the chromecast button
+        console.info('Chromecast available');
+        var btns = document.querySelectorAll('.cc_btn');
+        for (i = 0; i < btns.length; i++) {
+          btns[i].style.display = 'inline';
+        }
+      }
+      else {
+        console.error('Chromecast not available');
+      }
+    };
+
+    var sessionListener = function (e) {
+      console.log('SessionListener', e);
+    };
+
+    var onInitSuccess = function () {
+      console.info('Succesfully init');
+    };
+
+    var onError = function (e) {
+      console.error('Init failed', e);
+    };
+  };
+
+  /**
+   * Start the Chromecast to play the media URL given as
+   * parameter.
+   * @param  {string} currentMediaURL Video URL
+   */
+  window.chromecaster = function (currentMediaURL) {
+
+    var onLaunchError = function (e) {
+      console.error('Fail to request a session', e);
+    };
+
+    var onRequestSessionSuccess = function (session) {
+      var mediaInfo = new chrome.cast.media.MediaInfo(currentMediaURL);
+      mediaInfo.contentType = 'video/mp4';
+      mediaInfo.metadata = new chrome.cast.media.GenericMediaMetadata();
+      mediaInfo.customData = null;
+      mediaInfo.streamType = chrome.cast.media.StreamType.BUFFERED;
+      mediaInfo.textTrackStyle = new chrome.cast.media.TextTrackStyle();
+      mediaInfo.duration = null;
+
+      var request = new chrome.cast.media.LoadRequest(mediaInfo);
+      session.loadMedia(request,
+         onMediaDiscovered.bind(this, 'loadMedia'),
+         onMediaError);
+
+      function onMediaDiscovered(how, media) {
+        console.log('onMediaDiscovered', how, media);
+        currentMedia = media;
+        currentMedia.play(null, function (e) {console.log(42);}, function (e) {console.error('play failed');});
+      }
+
+      function onMediaError(e) {
+        console.error('You fucked up the cast', e);
+      }
+    };
+
+    chrome.cast.requestSession(onRequestSessionSuccess, onLaunchError);
+  };
+
   // Let's start the magic
   // Get the list of JSON url present in the current page
   var jsonUrls = getJsonsUrls();
   // Send the requests, and give the callback to call
   // once the requests are completed
   sendRequests(jsonUrls, parseVideosInfo);
-})();
+
+  // Init the Chromecast
+  initChromecast();
+})(window);
