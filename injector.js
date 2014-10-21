@@ -3,21 +3,80 @@
  * v.0.1 [alpha]
  *
  * This is a bit semantic, but who care, this is just a bad hack.
- * 
+ * If you like italian cuisine, you will love this spaguetti code, enjoy!
+ *
+ * To sort this out (a bit) here is some explanations:
+ *
+ *   0. Init
+ *
+ *   1. Retrieve data
+ *      > Get the json url
+ *      > Load them
+ *
+ *   2. Templating
+ *      > Parse data to templating
+ *      > Insert final dom
+ *
+ *   3. Chromecast
+ *      > Init the chromecast (then display buttons if success)
+ *
  */
 
 (function (window) {
-  var HTML_INTRO = '<h1>WE LUV\' ARTE</h1><p>Here the list of video(s) we could retrieve from the current page, with the different versions and qualities. <i>To download them on bad browsers (:Internet Explorer and Safari), make a right click on a tag with the quality you want, then "Save the link as"</i></p>',
+
+  /**
+   * Const declarations
+   * These variable must change during the execution
+   *
+   * HTML_INTRO    Panel introduction (html)
+   * HTML_WARN     Warning message in case of problem (html)
+   * HTML_CLOSE    Close button (html)
+   * DOM_CLASS     Class name of the panel
+   * CC_SCRIPT     Script url of the chromecast api
+   * STYLE_TAG     Inline styling of the panel (html)
+   */
+  var HTML_INTRO = '<h1>WE LUV\' ARTE</h1><p>Here the list of video(s) we could retrieve from the current page, with the different versions and qualities. <i>To download them on bad browsers (:Internet Explorer and Safari), make a right click on a tag with the quality you want, then "Save the link as"</i></p><p>If you have a Chromecast, you can directly cast the videos on your TV. Just install the <a href="https://chrome.google.com/webstore/detail/google-cast/boadgeojelhgndaghljhdicfkmllpafd">Chrome Extension</a> then the cast option will be available.</p>',
       HTML_WARN  = '<h2>That\'s awkward, but we cannot retrieve a video. Be sure you are on a valid page (: arte.tv). Otherwise go on <a href="http://maxwellito.github.io/weluvarte">http://maxwellito.github.io/weluvarte</a> for more information. Sorry.',
       HTML_CLOSE = '<div onclick="this.parentNode.remove();" style="position:absolute; top:5px; right:5px;cursor: pointer;font-size: 3em;line-height: 0.5em;">&#215;</div>',
       DOM_CLASS  = 'wla',
-      STYLE_TAG  = '<style>.' + DOM_CLASS + ' {position: absolute; top: 0; left: 0; padding: 2%; width: 100%; z-index: 99999; background: white;box-sizing: border-box;border-bottom: 15px solid #fd4600;} .' + DOM_CLASS + ' .dl_btn{font-weight: bold; color: white; padding:3px; border-radius: 3px; background: #333;} .' + DOM_CLASS + ' .cc_btn{display: none; margin-right: 20px;} .' + DOM_CLASS + '_video {border-top: 3px solid black;}</style>',
-      CC_SCRIPT  = 'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js';
+      CC_SCRIPT  = 'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js',
+      STYLE_TAG  = '<style>' +
+                      '.' + DOM_CLASS + ' {position: absolute; top: 0; left: 0; padding: 2%; width: 100%; z-index: 99999; background: white; box-sizing: border-box; border-bottom: 15px solid #fd4600;} ' +
+                      '.' + DOM_CLASS + ' .lbl{font-weight: bold; color: #fff; padding:5px; background-color: #333;} ' +
+                      '.' + DOM_CLASS + ' .bttn {font-weight: bold; color: #000; padding:5px; border-left: 1px solid #666; cursor: pointer;} ' +
+                      '.' + DOM_CLASS + ' .bttn_wrap{margin-left: 8px; border-radius: 3px; overflow: hidden; display: inline-block; vertical-align: bottom; border: 1px solid #333;} ' +
+                      '.' + DOM_CLASS + ' .cc_bttn_wrap{display: none;} ' +
+                      '.' + DOM_CLASS + ' .cc_bttn_wrap .lbl{background: url("//maxwellito.github.io/weluvarte/assets/chromecast_icon.svg") #333 no-repeat 4px center; background-size: 20px; padding-left: 30px;} ' +
+                      '.' + DOM_CLASS + '_video {border-top: 3px solid black;}' +
+                    '</style>';
 
   /**
-   * 
+   * INITIALIZE ***************************************************************
+   *
+   * Let's start the magic
+   * Get the list of JSON url present in the current page
+   *
+   * Send the requests, and give the callback to call
+   * once the requests are completed. This callback
+   * will use the data returned to generate the panel
+   * and insert it.
+   *
+   * Then finish by init the Chromecast
+   */
+  var jsonUrls = getJsonsUrls();
+  sendRequests(jsonUrls, parseVideosInfo);
+  initChromecast();
+
+
+  /**
+   * RETRIEVING DATA **********************************************************
+   *
+   * `XMLHttpRequest` and `querySelectorAll` is required
+   */
+
+  /**
    * Get the JSON url present in the DOM
-   * 
+   *
    * @return {Array} List of URL
    */
   function getJsonsUrls () {
@@ -42,7 +101,7 @@
   /**
    * Make the XHR to load JSON files
    * then pass them to the callback
-   * 
+   *
    * @param  {Array}   jsonUrls Array of JSON url to load
    * @param  {Function} callback Callback called once the requests are over
    */
@@ -82,6 +141,12 @@
     }
   }
 
+
+  /**
+   * TEMPLATING ***************************************************************
+   *
+   */
+
   /**
    * Parse the results and generate the final HTML
    * to inject in the page
@@ -112,7 +177,7 @@
     ccScriptDom = document.createElement('script');
     ccScriptDom.src = CC_SCRIPT;
     document.body.appendChild(ccScriptDom);
-    
+
     // Create and set the DOM
     finalDom = document.createElement('div');
     finalDom.className = DOM_CLASS;
@@ -127,19 +192,21 @@
    * Parse a video object to it's HTML.
    * If the video is not parsable, the function
    * will return en empty string
-   * 
+   *
    * @param  {Object} videoInfo Video info object
    * @return {String}           HTML
    */
   function generateDom (videoInfo) {
-    var v, i, vsr,
-      versions = {},
+    var v, i, vsrs, vsr,
+      downloads = {},
+      chromecast = {},
       output = '';
 
     if (!videoInfo.videoJsonPlayer || !videoInfo.videoJsonPlayer.VSR) {
       return output;
     }
 
+    // Prepair the video by templating title and description
     v = videoInfo.videoJsonPlayer;
     output += '<h3>' + v.VTI + ' [' + v.VTX + ']</h3>';
 
@@ -149,61 +216,115 @@
     output += !!v.VDE      ?         v.VDE                   : '';
     output += '</p>';
 
-    for(i in v.VSR) {
-      vsr = v.VSR[i];
-      if (i.substr(0,5) != "HTTP_") {
+    // Get the video qualities
+    vsrs = sortVsrs(v.VSR)
+    for (i = 0; i < vsrs.length; i++) {
+      vsr = vsrs[i];
+      if (vsr.streamName.substr(0,5) != "HTTP_") {
         continue;
       }
 
-      if (!versions[vsr.versionLibelle]) {
-        versions[vsr.versionLibelle] = [];
+      if (!downloads[vsr.versionLibelle]) {
+        downloads[vsr.versionLibelle] = [];
+        chromecast[vsr.versionLibelle] = [];
       }
-      versions[vsr.versionLibelle].push('<a class="dl_btn" href="'+vsr.url+'" download>'+vsr.quality+'</a>');
-      versions[vsr.versionLibelle].push('<img class="cc_btn" onclick="chromecaster(\''+vsr.url+'\')" src="//localhost/chromecast.svg" /> ');
+      downloads[vsr.versionLibelle].push('<a class="bttn" href="'+vsr.url+'" download>'+vsr.quality+'</a>');
+      chromecast[vsr.versionLibelle].push('<span class="bttn cc_btn" onclick="chromecaster(\''+vsr.url+'\')" />'+vsr.quality+'</span>');
     }
 
-    for (i in versions) {
-      output += '<p><b>' + i + '</b>: '+ versions[i].join(' ') +'</p>';
+    for (i in downloads) {
+      output += '<p>' +
+                  '<strong>' + i + '</strong>' +
+                  '<span class="bttn_wrap">' +
+                    '<span class="lbl">Download</span>' +
+                    downloads[i].join('') +
+                  '</span>' +
+                  '<span class="bttn_wrap cc_bttn_wrap">' +
+                    '<span class="lbl">Chromecast</span>' +
+                    chromecast[i].join('') +
+                  '</span>' +
+                '</p>';
     }
     return '<div class="'+ DOM_CLASS + '_video">' + output + '</div>';
   }
 
   /**
+   * Transform VSR object from JSON object to array
+   * sorted by bitrate. The method add the attribute
+   * `streamName` which contain the object key.
+   *
+   * @param {Object} input VSR object from JSON data object
+   * @return {Array} VSR object as array, sorted by bitrate
+   */
+  function sortVsrs (input) {
+    var i, output = [];
+
+    if (input) {
+      for (i in input) {
+        input[i]['streamName'] = i;
+        output.push(input[i]);
+      }
+      output = output.sort(function (a, b) {
+        return a.bitrate - b.bitrate;
+      });
+    }
+    return output;
+  }
+
+
+  /**
+   * CHROMECAST ***************************************************************
+   *
+   * In these method, the object `console` is used, quite often.
+   * But this code can only be executed in a Chrome environment,
+   * so the `console` object will be available and won't break
+   * the code.
+   *
+   * This part of the code is still in beta test, the log will
+   * be used to debug the script if necessary.
+   */
+
+  /**
    * Init the Chromecast to check if the API is available
    * and get the necessary IDs
-   * 
+   *
    */
-  var initChromecast = function () {
+  function initChromecast () {
+
+    // Listener setup for when the chromecast is available
+    window['__onGCastApiAvailable'] = function (loaded, errorInfo) {
+      if (loaded) {
+        initializeCastApi();
+      } else {
+        console.error('Chromecast API error', errorInfo);
+      }
+    };
+
+    // Check if the Chromecast is initialised
+    // (might happend if one day Arte implement the Chromecast)
+    if (!chrome.cast || !chrome.cast.isAvailable) {
+      setTimeout(initializeCastApi, 1000);
+    }
+
     // Init the Cast API
-    var initializeCastApi = function () {
+    function initializeCastApi () {
       console.info('Initialize Chromecast API');
       var sessionRequest = new chrome.cast.SessionRequest(chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID);
       var apiConfig = new chrome.cast.ApiConfig(sessionRequest, sessionListener, receiverListener);
       chrome.cast.initialize(apiConfig, onInitSuccess, onError);
     };
 
-    // Listener setup for when the chromecast is available
-    // >> useless in our case
-    window['__onGCastApiAvailable'] = function (loaded, errorInfo) {
-      if (loaded) {
-        initializeCastApi();
-      } else {
-        console.log(errorInfo);
-      }
+    function sessionListener (e) {
+      console.log('SessionListener', e);
     };
 
-    // Check if the Chromecast is initialised
-    if (!chrome.cast || !chrome.cast.isAvailable) {
-      setTimeout(initializeCastApi, 1000);
-    }
-
-    var receiverListener = function (e) {
-      if ( e === chrome.cast.ReceiverAvailability.AVAILABLE) {
+    function receiverListener (e) {
+      if (e === chrome.cast.ReceiverAvailability.AVAILABLE) {
         // Perfect time to show the chromecast button
         console.info('Chromecast available');
-        var btns = document.querySelectorAll('.cc_btn');
+        var btns = document.querySelectorAll('.cc_bttn_wrap');
         for (i = 0; i < btns.length; i++) {
-          btns[i].style.display = 'inline';
+          btns[i].style.display = 'inline-block';
         }
       }
       else {
@@ -211,38 +332,39 @@
       }
     };
 
-    var sessionListener = function (e) {
-      console.log('SessionListener', e);
-    };
-
-    var onInitSuccess = function () {
+    function onInitSuccess () {
       console.info('Succesfully init');
     };
 
-    var onError = function (e) {
+    function onError (e) {
       console.error('Init failed', e);
     };
   };
 
   /**
-   * Start the Chromecast to play the media URL given as
-   * parameter.
+   * Start to cast the video URL given as parameter.
+   * The media must be a MP4 video.
+   * This is the only one method available from
+   * the global namespace.
+   *
    * @param  {string} currentMediaURL Video URL
    */
   window.chromecaster = function (currentMediaURL) {
 
-    var onLaunchError = function (e) {
+    chrome.cast.requestSession(onRequestSessionSuccess, onLaunchError);
+
+    function onLaunchError (e) {
       console.error('Fail to request a session', e);
     };
 
-    var onRequestSessionSuccess = function (session) {
+    function onRequestSessionSuccess (session) {
       var mediaInfo = new chrome.cast.media.MediaInfo(currentMediaURL);
-      mediaInfo.contentType = 'video/mp4';
-      mediaInfo.metadata = new chrome.cast.media.GenericMediaMetadata();
-      mediaInfo.customData = null;
-      mediaInfo.streamType = chrome.cast.media.StreamType.BUFFERED;
+      mediaInfo.contentType    = 'video/mp4';
+      mediaInfo.metadata       = new chrome.cast.media.GenericMediaMetadata();
+      mediaInfo.customData     = null;
+      mediaInfo.streamType     = chrome.cast.media.StreamType.BUFFERED;
       mediaInfo.textTrackStyle = new chrome.cast.media.TextTrackStyle();
-      mediaInfo.duration = null;
+      mediaInfo.duration       = null;
 
       var request = new chrome.cast.media.LoadRequest(mediaInfo);
       session.loadMedia(request,
@@ -250,26 +372,18 @@
          onMediaError);
 
       function onMediaDiscovered(how, media) {
-        console.log('onMediaDiscovered', how, media);
+        console.info('Media discovered', how, media);
         currentMedia = media;
-        currentMedia.play(null, function (e) {console.log(42);}, function (e) {console.error('play failed');});
+        currentMedia.play(null,
+          function (e) {console.info('Media play success');},
+          function (e) {console.error('Media play failed');}
+        );
       }
 
       function onMediaError(e) {
-        console.error('You fucked up the cast', e);
+        console.error('Media failed', e);
       }
     };
-
-    chrome.cast.requestSession(onRequestSessionSuccess, onLaunchError);
   };
 
-  // Let's start the magic
-  // Get the list of JSON url present in the current page
-  var jsonUrls = getJsonsUrls();
-  // Send the requests, and give the callback to call
-  // once the requests are completed
-  sendRequests(jsonUrls, parseVideosInfo);
-
-  // Init the Chromecast
-  initChromecast();
 })(window);
