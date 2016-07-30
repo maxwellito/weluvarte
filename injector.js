@@ -82,7 +82,7 @@
   function getJsonsUrls () {
     var jsonUrl,
       jsonUrlList = [],
-      tags = document.querySelectorAll('*[arte_vp_url_oembed]');
+      tags = document.querySelectorAll('.focus *[arte_vp_url_oembed]');
 
     // Find the URLs and remove duplicates
     for (i = 0; i < tags.length; i++) {
@@ -208,7 +208,7 @@
 
     // Prepair the video by templating title and description
     v = videoInfo.videoJsonPlayer;
-    output += '<h3>' + v.VTI + ' [' + v.VTX + ']</h3>';
+    output += '<h3>' + v.VTI + ' [' + v.VDU + ' min]</h3>';
 
     output += '<p>';
     output += !!v.infoProg ? '<b>' + v.infoProg + '</b><br>' : '';
@@ -228,13 +228,13 @@
         downloads[vsr.versionLibelle] = [];
         chromecast[vsr.versionLibelle] = [];
       }
-      downloads[vsr.versionLibelle].push('<a class="bttn" href="'+vsr.url+'" download>'+vsr.quality+'</a>');
+      downloads[vsr.versionLibelle].push('<a class="bttn" href="'+vsr.url+'" download>'+vsr.quality+' ['+vsr.width+'p]</a>');
       chromecast[vsr.versionLibelle].push('<span class="bttn cc_btn" onclick="chromecaster(' +
         '\'' + vsr.url + '\', ' +
         '\'' + stripSlashes(v.VTI) + '\', ' +
-        '\'' + stripSlashes(v.infoProg) + '\', ' +
+        '\'' + stripSlashes(vsr.versionLibelle) + '\', ' +
         (v.videoDurationSeconds || '') +
-      ')" />'+vsr.quality+'</span>');
+      ')" />'+vsr.quality+' ['+vsr.width+'p]</span>');
     }
 
     for (i in downloads) {
@@ -282,7 +282,7 @@
    *
    */
   function stripSlashes (input) {
-    return input.replace(/\\(.)/mg, '$1');
+    return (input || '').replace(/\\(.)/mg, '$1');
   }
 
 
