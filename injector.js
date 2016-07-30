@@ -82,17 +82,17 @@
   function getJsonsUrls () {
     var jsonUrl,
       jsonUrlList = [],
-      tags = document.querySelectorAll('*[arte_vp_url]');
+      tags = document.querySelectorAll('*[arte_vp_url_oembed]');
 
     // Find the URLs and remove duplicates
     for (i = 0; i < tags.length; i++) {
-      if (!tags[i].attributes || !tags[i].attributes['arte_vp_url'] || !tags[i].attributes['arte_vp_url'].value) {
+      if (!tags[i].attributes || !tags[i].attributes['arte_vp_url_oembed'] || !tags[i].attributes['arte_vp_url_oembed'].value) {
         // Ermm... that's embarrassing
         continue;
       }
-      jsonUrl = tags[i].attributes['arte_vp_url'].value;
+      jsonUrl = tags[i].attributes['arte_vp_url_oembed'].value;
       if (jsonUrlList.indexOf(jsonUrl) === -1) {
-        jsonUrlList.push(jsonUrl);
+        jsonUrlList.push(jsonUrl.replace('/oembed/', '/config/'));
       }
     }
     return jsonUrlList;
@@ -279,7 +279,7 @@
   /**
    * Strip slashes
    *
-   * 
+   *
    */
   function stripSlashes (input) {
     return input.replace(/\\(.)/mg, '$1');
